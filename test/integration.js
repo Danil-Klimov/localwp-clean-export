@@ -244,6 +244,7 @@ async function main() {
       assert(prompted);
       assert.deepEqual(await fsp.readFile(destination), previous);
     });
+    await require('./domain-replacement')({ check, temp, options, zipContents, archiver, micromatch });
     console.log(`\n${passed} integration checks passed with Local ${localRequire('./package.json').version}.`);
   } finally { await fsp.rm(temp, { recursive: true, force: true }); }
 }

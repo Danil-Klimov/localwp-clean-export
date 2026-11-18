@@ -105,7 +105,7 @@ async function writeZip({ root, sqlPath, sqlName, destination, excluded, archive
 }
 
 async function exportWordPress({ webRoot, siteRoot, destination, filter, archiver, micromatch,
-  dump, signal, onProgress = () => {}, tempParent = os.tmpdir() }) {
+  dump, transformDump, signal, onProgress = () => {}, tempParent = os.tmpdir() }) {
   const root = await fsp.realpath(webRoot);
   const selected = path.resolve(destination);
   const parent = await fsp.realpath(path.dirname(selected));
@@ -134,6 +134,11 @@ async function exportWordPress({ webRoot, siteRoot, destination, filter, archive
     signal?.throwIfAborted();
     const sqlStat = await fsp.stat(sqlPath);
     if (!sqlStat.isFile() || sqlStat.size === 0) throw new Error('Не отримано непорожній SQL-дамп.');
+    if (transformDump) {
+      onProgress({ stage: 'domain' });
+      summary.domainReplacement = await transformDump(sqlPath, signal);
+      signal?.throwIfAborted();
+    }
     // Write beside the destination, then rename on success. An existing backup
     // survives a failed or cancelled export; incomplete ZIPs are never published.
     stagingDirectory = await fsp.mkdtemp(path.join(parent, '.local-clean-export-'));

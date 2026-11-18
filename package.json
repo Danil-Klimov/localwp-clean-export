@@ -1,8 +1,8 @@
 {
   "name": "local-clean-export",
   "productName": "Clean WordPress Export",
-  "version": "1.0.0",
-  "description": "Export WordPress files and a fresh SQL dump using Local's export exclusions.",
+  "version": "1.1.1",
+  "description": "Export WordPress files and SQL with optional domain replacement and Local's exclusions.",
   "author": "madgod",
   "license": "MIT",
   "main": "src/main.js",

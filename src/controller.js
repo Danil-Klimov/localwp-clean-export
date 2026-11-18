@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const { PREFIX, DEFAULT_FILTER } = require('./constants');
 const { dumpDatabase } = require('./database');
 const { exportWordPress } = require('./export');
+const { prepareDomainReplacement, replaceDomainInDump } = require('./domain-replacement');
 
 function createController({ services, electron, archiver, micromatch }) {
   const jobs = new Map();
@@ -26,13 +27,15 @@ function createController({ services, electron, archiver, micromatch }) {
   return {
     async info(_event, siteId) {
       const site = getSite(siteId);
-      return { filter: getFilter(), status: status(site), busy: jobs.has(siteId),
+      return { filter: getFilter(), sourceDomain: site.domain || '', status: status(site), busy: jobs.has(siteId),
         lastExport: lastExports.get(siteId) || null };
     },
-    async start(event, siteId) {
+    async start(event, siteId, options = {}) {
       if (jobs.has(siteId)) throw new Error('Для цього сайту вже виконується експорт.');
       const site = getSite(siteId);
       if (status(site) !== 'running') throw new Error('Запустіть сайт у Local перед експортом.');
+      if (!options || typeof options !== 'object' || Array.isArray(options)) throw new Error('Некоректні параметри експорту.');
+      prepareDomainReplacement(site.domain, options.targetDomain);
       const controller = new AbortController();
       jobs.set(siteId, { controller, sender: event.sender });
       let lastProgress = 0;
@@ -44,12 +47,12 @@ function createController({ services, electron, archiver, micromatch }) {
       };
       try {
         const filename = `${site.name.replace(/[^\p{L}\p{N}._-]+/gu, '-') || 'wordpress'}-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
-        const options = { title: 'Експорт WordPress', defaultPath: filename,
+        const saveOptions = { title: 'Експорт WordPress', defaultPath: filename,
           buttonLabel: 'Зберегти ZIP', filters: [{ name: 'ZIP archive', extensions: ['zip'] }] };
         const owner = electron.BrowserWindow.fromWebContents(event.sender);
         const selected = owner
-          ? await electron.dialog.showSaveDialog(owner, options)
-          : await electron.dialog.showSaveDialog(options);
+          ? await electron.dialog.showSaveDialog(owner, saveOptions)
+          : await electron.dialog.showSaveDialog(saveOptions);
         if (selected.canceled || !selected.filePath || controller.signal.aborted) {
           report({ stage: 'canceled' }, true);
           return { canceled: true };
@@ -75,10 +78,12 @@ function createController({ services, electron, archiver, micromatch }) {
         const currentSite = getSite(siteId);
         if (status(currentSite) !== 'running') throw new Error('Сайт зупинено. Запустіть його та повторіть експорт.');
         const dbService = services.lightningServices.getSiteServiceByRole(currentSite, 'db');
+        const replacement = prepareDomainReplacement(currentSite.domain, options.targetDomain);
         const result = await exportWordPress({
           webRoot: currentSite.paths.webRoot, siteRoot: currentSite.longPath,
           destination, filter, archiver, micromatch, signal: controller.signal,
           dump: (file, signal) => dumpDatabase(dbService, currentSite.mysql.database, file, signal),
+          transformDump: replacement ? (file, signal) => replaceDomainInDump(file, replacement, signal) : undefined,
           onProgress: report,
         });
         lastExports.set(siteId, result);

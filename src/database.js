@@ -18,7 +18,7 @@ async function dumpDatabase(service, database, destination, signal) {
   // Use Local's bundled client and configuration. No shell, WP bootstrap,
   // credentials on the command line, or writes to the site's app/sql directory.
   const child = spawn(service.bin.mysqldump, [
-    '--single-transaction', '--quick', '--extended-insert=FALSE', database,
+    '--single-transaction', '--quick', '--extended-insert=FALSE', '--hex-blob', database,
   ], {
     env: { ...process.env, ...service.env, MYSQL_HOME: service.configPath },
     stdio: ['ignore', 'pipe', 'pipe'],
