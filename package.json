@@ -1,0 +1,17 @@
+{
+  "name": "local-clean-export",
+  "productName": "Clean WordPress Export",
+  "version": "1.0.0",
+  "description": "Export WordPress files and a fresh SQL dump using Local's export exclusions.",
+  "author": "madgod",
+  "license": "MIT",
+  "main": "src/main.js",
+  "renderer": "src/renderer.js",
+  "engines": { "local-by-flywheel": ">=10.2.0" },
+  "scripts": {
+    "check": "node scripts/check.js",
+    "test": "node scripts/test.js",
+    "pack": "node scripts/pack.js"
+  },
+  "files": ["src", "README.md", "LICENSE"]
+}
